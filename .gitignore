@@ -1,0 +1,48 @@
+# Local credentials (commit examples only)
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/iot_secrets.h
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+instance/
+
+# JavaScript and generated builds
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+
+# Local data and private keys
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*.local
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# Local build/validation tools
+.tools/
+playwright-results/

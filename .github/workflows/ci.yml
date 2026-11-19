@@ -1,0 +1,78 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: smartpark
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: smartpark_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://smartpark:ci-only-password@localhost:5432/smartpark_test
+      TEST_DATABASE_URL: postgresql://smartpark:ci-only-password@localhost:5432/smartpark_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')" >> "$GITHUB_ENV"
+      - run: pip install -r backend/requirements-dev.txt pip-audit
+      - run: python -m flask --app backend/run.py db upgrade
+      - run: python -m flask --app backend/run.py db check
+      - run: python -m flask --app backend/run.py db downgrade base
+      - run: python -m pytest -q backend/tests
+      - run: python -m pip_audit -r backend/requirements.txt
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [admin, public]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/**/package-lock.json
+      - run: npm ci --prefix frontend/shared
+      - run: npm ci --prefix frontend/${{ matrix.app }}/src
+      - run: npm --prefix frontend/${{ matrix.app }} run lint
+      - run: npm --prefix frontend/${{ matrix.app }} run build
+      - run: npm --prefix frontend/${{ matrix.app }}/src audit --audit-level=moderate
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - run: arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+      - run: arduino-cli core install esp32:esp32@3.3.12 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+      - run: arduino-cli lib install ArduinoJson@7.4.2
+      - run: cp backend/iot_secrets.example.h backend/iot_secrets.h
+      - run: arduino-cli compile --fqbn esp32:esp32:esp32 backend/firmware/smart_park
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install -r backend/requirements-dev.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: npm ci --prefix frontend/shared
+      - run: npm ci --prefix frontend/admin/src
+      - run: npm ci --prefix frontend/public/src
+      - run: python tools/capture_demo.py

@@ -1,0 +1,13 @@
+{
+  "name": "@smart-park/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.15.0"
+  },
+  "exports": {
+    "./services/api": "./services/api.jsx",
+    "./services/apiLoadingStore": "./services/apiLoadingStore.js"
+  }
+}

@@ -1,0 +1,98 @@
+from flask import Blueprint, request, jsonify , g , current_app
+from app.controllers.admin_controller import register_admin, login_admin,get_dashboard_data, update_username,delete_admin , get_all_admins , approve_admin , toggle_spot_oos
+from app.utils.auth import token_required
+from app import limiter
+from werkzeug.exceptions import BadRequest
+
+
+def json_body():
+    data = request.get_json()
+    if not isinstance(data, dict):
+        raise BadRequest("Expected a JSON object")
+    return data
+
+admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
+
+@admin_bp.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
+def register():
+    # Inscription d’un compte admin (créé en base mais potentiellement non approuvé).
+    data = json_body()
+    response, status = register_admin(data)
+    return jsonify(response), status
+
+
+@admin_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute")
+def login():
+    # Authentification: retourne un JWT (Bearer) à stocker côté client.
+    data = json_body()
+    response, status = login_admin(data)
+    return jsonify(response), status
+
+
+@admin_bp.route("/dashboard", methods=["GET"])
+@token_required
+def dashboard():
+    # Endpoint protégé: nécessite un JWT valide. Les KPI retournés servent au dashboard admin.
+    data = get_dashboard_data()
+    return jsonify(data)
+
+@admin_bp.route("/update-username", methods=["PUT"])
+@token_required
+def update_username_route():
+    data = json_body()
+
+    # `token_required` hydrate `g` (admin_id/role/...) à partir du JWT.
+    admin_id = g.admin_id
+
+    response, status = update_username(admin_id, data)
+    return jsonify(response), status
+
+@admin_bp.route("/delete-account", methods=["DELETE"])
+@token_required
+def delete_account_route():
+    admin_id = g.admin_id
+
+    response, status = delete_admin(admin_id)
+    return jsonify(response), status
+
+
+@admin_bp.route("/get-admins", methods=["GET"])
+@token_required
+def admins():
+    # Lecture de la liste des comptes: autorisée pour admin et super_admin uniquement.
+    if g.role not in ["admin","super_admin"]:
+        return {"error": "Forbidden"}, 403
+
+    return jsonify(get_all_admins())
+
+
+@admin_bp.route("/approve-admin/<int:id>", methods=["PUT"])
+@token_required
+def approve(id):
+    # Approbation: réservée au super_admin (contrôle RBAC minimal côté route).
+    if g.role != "super_admin":
+        return {"error": "Forbidden"}, 403
+
+    return approve_admin(id)
+
+
+@admin_bp.route("/delete-admin/<int:id>", methods=["DELETE"])
+@token_required
+def delete(id):
+    # Suppression d’un compte admin: réservée au super_admin.
+    if g.role != "super_admin":
+        return {"error": "Forbidden"}, 403
+
+    return delete_admin(id)
+
+@admin_bp.route("/spot/<int:spot_id>/toggle-oos", methods=["PATCH"])
+@token_required
+def change_state(spot_id):
+
+    # Bascule “Out of service” ↔ “Free” autorisée pour admin/super_admin.
+    if g.role not in ["super_admin", "admin"]:
+        return {"error": "Forbidden"}, 403
+
+    return toggle_spot_oos(spot_id)
