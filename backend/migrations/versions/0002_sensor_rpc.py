@@ -1,6 +1,7 @@
 """Install a device-scoped, transactional Supabase RPC on PostgreSQL."""
 from pathlib import Path
 from alembic import op
+from sqlalchemy import text
 
 revision = "0002_sensor_rpc"
 down_revision = "a9b6f621d0dc"
@@ -11,7 +12,7 @@ depends_on = None
 def upgrade():
     if op.get_bind().dialect.name == "postgresql":
         sql = Path(__file__).resolve().parents[2] / "database" / "sensor_rpc.sql"
-        op.get_bind().exec_driver_sql(sql.read_text(encoding="utf-8"))
+        op.execute(text(sql.read_text(encoding="utf-8")))
 
 
 def downgrade():
