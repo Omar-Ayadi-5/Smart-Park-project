@@ -28,6 +28,11 @@ def create_app(test_config=None):
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}},
          allow_headers=["Authorization", "Content-Type"],
          methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+    # SQLAlchemy 2.1 changed PostgreSQL's implicit driver. Use our installed driver
+    # explicitly while accepting the standard URLs supplied by hosting providers.
+    uri = app.config["SQLALCHEMY_DATABASE_URI"]
+    if uri.startswith(("postgres://", "postgresql://")):
+        app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql+psycopg2://" + uri.split("://", 1)[1]
     db.init_app(app)
     limiter.init_app(app)
     migrate.init_app(app, db, directory=str(Path(__file__).resolve().parents[1] / "migrations"))

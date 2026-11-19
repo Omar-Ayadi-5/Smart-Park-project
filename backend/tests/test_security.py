@@ -98,3 +98,14 @@ def test_cors_allows_only_configured_origins(client):
     assert client.options('/api/admin/login',headers=headers).headers['Access-Control-Allow-Origin']==headers['Origin']
     headers['Origin']='https://untrusted.example'
     assert 'Access-Control-Allow-Origin' not in client.options('/api/admin/login',headers=headers).headers
+
+
+@pytest.mark.parametrize("scheme", ["postgres", "postgresql", "postgresql+psycopg2"])
+def test_host_postgres_urls_use_installed_driver(scheme):
+    import secrets
+    application=create_app({"TESTING": True, "SECRET_KEY": secrets.token_hex(32),
+        "SQLALCHEMY_DATABASE_URI": scheme+"://user:placeholder@localhost/unused",
+        "RATELIMIT_ENABLED": False})
+    with application.app_context():
+        assert db.engine.dialect.driver == "psycopg2"
+        db.engine.dispose()
