@@ -10,7 +10,7 @@ Two React/Vite applications share an Axios API client and a global loading indic
 
 ## Requirements
 
-Use Node.js 22.12+ and npm. The locked Vite version also supports Node.js 20.19+. Run the [Flask backend](../backend/README.md) against an initialized SQLite or PostgreSQL database for API-backed views.
+Use Node.js 22.13+ and npm. The locked Vite version also supports Node.js 20.19+. Run the [Flask backend](../backend/README.md) against an initialized SQLite or PostgreSQL database for API-backed views.
 
 ## Install and configure
 

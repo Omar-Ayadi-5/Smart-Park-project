@@ -35,7 +35,7 @@ SQLite supports a self-contained web demo and fast tests. PostgreSQL provides th
 
 ## Quick start: web demo
 
-Requires Python 3.10+ and Node.js 22.12+. Run these commands in PowerShell from a fresh checkout:
+Requires Python 3.10+ and Node.js 22.13+. Run these commands in PowerShell from a fresh checkout:
 
 ```powershell
 cd backend
